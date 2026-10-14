@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f4f6f1">
+<title>聚餐分帳器</title>
+<style>
+:root{color-scheme:light;--ink:#202a25;--muted:#65716a;--green:#236b4b;--line:#dce4dd;--paper:#fff;--bg:#f4f6f1;--soft:#eaf3ed;--gold:#fff3d9}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;padding:28px 16px 44px}
+main{max-width:620px;margin:0 auto}.brand{font-size:13px;letter-spacing:.12em;color:var(--green);font-weight:750;margin:0 0 8px}h1{font-size:clamp(28px,7vw,38px);line-height:1.2;margin:0 0 8px;letter-spacing:.01em}.intro{color:var(--muted);margin:0 0 24px;font-size:15px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:clamp(20px,5vw,30px);box-shadow:0 10px 30px #233b2b0b}.field{margin-bottom:22px}label,.label{display:block;font-weight:700;font-size:15px;margin-bottom:9px}.field small{display:block;color:var(--muted);font-size:13px;margin-top:7px}
+input[type=number]{width:100%;height:56px;border:1px solid #cbd7ce;border-radius:12px;padding:0 15px;font:inherit;font-size:20px;color:var(--ink);background:#fff;outline:none}input:focus{border-color:var(--green);box-shadow:0 0 0 3px #236b4b22}
+.suffix-wrap{position:relative}.suffix-wrap input{padding-right:60px}.suffix{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.switchline{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:15px 0 3px}.switchcopy strong{display:block;font-size:15px}.switchcopy span{display:block;color:var(--muted);font-size:13px;margin-top:4px}.switch{position:relative;width:54px;height:32px;flex:none}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;border-radius:30px;background:#cbd4cd;transition:.2s;cursor:pointer}.slider:before{content:"";position:absolute;width:24px;height:24px;left:4px;top:4px;border-radius:50%;background:white;transition:.2s;box-shadow:0 1px 4px #0002}.switch input:checked+.slider{background:var(--green)}.switch input:checked+.slider:before{transform:translateX(22px)}.switch input:focus-visible+.slider{outline:3px solid #236b4b55;outline-offset:3px}
+.result{margin-top:20px;border-radius:16px;background:var(--soft);padding:22px}.result-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:16px}.result h2{font-size:18px;margin:0}.grand{color:var(--muted);font-size:13px;text-align:right}.grand b{color:var(--ink);font-size:17px;display:block;margin-top:2px}.people{display:grid;gap:10px}.person{display:flex;justify-content:space-between;align-items:center;background:white;border-radius:11px;padding:12px 14px}.person .who{font-weight:650}.person .amount{font-weight:800;font-size:19px;font-variant-numeric:tabular-nums}.person.payer{border:1px solid #bad4c3}.badge{font-size:11px;color:var(--green);background:#e3f1e7;border-radius:20px;padding:3px 8px;margin-left:7px;font-weight:700;vertical-align:2px}.note{margin:13px 1px 0;color:#465b4d;font-size:13px;line-height:1.6}.warning{margin:12px 1px 0;color:#835d14;font-size:13px;display:none}.footer{margin:17px 0 0;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:420px){body{padding:22px 13px 34px}.card{border-radius:17px}.result{padding:17px}.grand{font-size:12px}}
+</style>
+</head>
+<body>
+<main>
+<p class="brand">聚餐後，算得清清楚楚</p>
+<h1>聚餐分帳器</h1>
+<p class="intro">輸入金額和人數，快速算出每個人要付多少。</p>
+<section class="card" aria-label="分帳設定">
+<div class="field"><label for="total">餐費總金額</label><div class="suffix-wrap"><input id="total" type="number" inputmode="numeric" min="1" step="1" value="1000"><span class="suffix">元</span></div><small>請輸入帳單上的金額（整數）</small></div>
+<div class="field"><label for="count">聚餐人數</label><div class="suffix-wrap"><input id="count" type="number" inputmode="numeric" min="1" step="1" value="3"><span class="suffix">人</span></div><small>包含負責付錢的人</small></div>
+<div class="switchline"><div class="switchcopy"><strong>加 10% 服務費</strong><span>服務費會計入分帳總額</span></div><label class="switch" aria-label="加 10% 服務費"><input id="service" type="checkbox"><span class="slider"></span></label></div>
+<div class="result" aria-live="polite"><div class="result-head"><h2>每人應付</h2><div class="grand">分帳總額<b id="grand">1,000 元</b></div></div><div class="people" id="people"></div><p class="note" id="note"></p><p class="warning" id="warning"></p></div>
+</section>
+<p class="footer">資料只在這個頁面即時計算，不會儲存或傳送。</p>
+</main>
+<script>
+const totalInput=document.querySelector('#total'),countInput=document.querySelector('#count'),serviceInput=document.querySelector('#service');
+const fmt=new Intl.NumberFormat('zh-TW');
+function update(){
+ const raw=Number(totalInput.value),count=Number(countInput.value),warning=document.querySelector('#warning');
+ if(!Number.isSafeInteger(raw)||raw<1||!Number.isSafeInteger(count)||count<1){document.querySelector('#people').innerHTML='';document.querySelector('#grand').textContent='—';document.querySelector('#note').textContent='';warning.style.display='block';warning.textContent='請輸入大於 0 的整數金額與人數。';return}
+ if(count>1000){document.querySelector('#people').innerHTML='';document.querySelector('#grand').textContent='—';document.querySelector('#note').textContent='';warning.style.display='block';warning.textContent='人數最多可輸入 1,000 人。';return}
+ warning.style.display='none';
+ const grand=serviceInput.checked?Math.round(raw*1.1):raw;
+ const each=Math.floor(grand/count),payer=grand-each*(count-1),extra=payer-each;
+ document.querySelector('#grand').textContent=fmt.format(grand)+' 元';
+ let rows=`<div class="person payer"><span class="who">付錢的人<span class="badge">含零頭</span></span><span class="amount">${fmt.format(payer)} 元</span></div>`;
+ for(let i=2;i<=count;i++)rows+=`<div class="person"><span class="who">其他人 ${i-1}</span><span class="amount">${fmt.format(each)} 元</span></div>`;
+ document.querySelector('#people').innerHTML=rows;
+ let detail=`${count===1?'只有付錢的人參加。':`其他 ${count-1} 人各付 ${fmt.format(each)} 元。`}`;
+ document.querySelector('#note').textContent=extra>0?`${detail}付錢的人多付 ${fmt.format(extra)} 元零頭；所有金額合計 ${fmt.format(grand)} 元。`:`${detail}所有金額合計 ${fmt.format(grand)} 元。`;
+}
+[totalInput,countInput,serviceInput].forEach(el=>el.addEventListener('input',update));update();
+</script>
+</body>
+</html>
